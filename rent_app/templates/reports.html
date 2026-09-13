@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Financial Report</h2>
+    <button class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Tenant</th>
+                    <th>Property</th>
+                    <th class="text-end">Base Rent</th>
+                    <th class="text-end">Pending Dues</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tenant in tenants %}
+                <tr>
+                    <td class="fw-bold">{{ tenant.name }}</td>
+                    <td>{{ tenant.property.name }}</td>
+                    <td class="text-end">₹{{ tenant.base_rent }}</td>
+                    <td class="text-end fw-bold {% if tenant.due_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                        ₹{{ tenant.due_amount }}
+                    </td>
+                    <td class="text-center">
+                        {% if tenant.due_amount > 0 %}
+                            <span class="badge bg-danger">Pending</span>
+                        {% else %}
+                            <span class="badge bg-success">Clear</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center p-4">No data available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

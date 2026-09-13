@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'property_detail' tenant.property.id %}">{{ tenant.property.name }}</a></li>
+    <li class="breadcrumb-item active">{{ tenant.name }}</li>
+  </ol>
+</nav>
+
+<div class="row">
+    <!-- Left: Profile & Payment -->
+    <div class="col-md-4 mb-4">
+        <div class="card mb-3 text-center p-4">
+            <div class="mb-3">
+                <div class="display-6 fw-bold text-primary">{{ tenant.name|make_list|first|upper }}</div>
+            </div>
+            <h4>{{ tenant.name }}</h4>
+            <p class="text-muted">{{ tenant.phone }}</p>
+            
+            {% if tenant.is_archived %}
+                <div class="alert alert-warning py-2 mb-3">
+                    <strong><i class="bi bi-info-circle"></i> Tenant Left</strong><br>
+                    <small>Left on: {{ tenant.left_date }}</small>
+                </div>
+            {% else %}
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <span class="badge bg-light text-dark border">Room {{ tenant.meter.room_number|default:"N/A" }}</span>
+                    <span class="badge bg-light text-dark border">Meter {{ tenant.meter.meter_number|default:"N/A" }}</span>
+                </div>
+            {% endif %}
+            
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded">
+                        <small class="text-muted d-block">Rent</small>
+                        <strong>₹{{ tenant.base_rent }}</strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded">
+                        <small class="text-muted d-block">Due</small>
+                        <strong class="{% if tenant.due_amount > 0 %}text-danger{% else %}text-success{% endif %}">₹{{ tenant.due_amount }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            {% if not tenant.is_archived %}
+            <div class="d-flex gap-2">
+                <a href="{% url 'edit_tenant' tenant.id %}" class="btn btn-outline-secondary btn-sm flex-fill">Edit</a>
+                <a href="{% url 'archive_tenant' tenant.id %}" class="btn btn-outline-danger btn-sm flex-fill" onclick="return confirm('Archive this tenant?')">Mark as Left</a>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if not tenant.is_archived %}
+        <div class="card">
+            <div class="card-header bg-dark text-white fw-bold">Record Transaction</div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="small text-muted">Date</label>
+                        {{ form.date }}
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="small text-muted">Type</label>
+                            {{ form.type }}
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">Mode</label>
+                            {{ form.mode }}
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="small text-muted">Amount Paying (₹)</label>
+                        {{ form.amount }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="small text-muted">Add Extra Charge (Optional)</label>
+                        {{ form.extra_charge }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="small text-muted">Proof Image</label>
+                        {{ form.proof_image }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Notes</label>
+                        {{ form.notes }}
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Save Transaction</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: History -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white fw-bold">Transaction History</div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Info</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transactions %}
+                        <tr>
+                            <td>{{ t.date }}</td>
+                            <td>
+                                {% if t.type == 'RENT' %}
+                                    <span class="badge bg-primary">Rent</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Elec</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small text-muted">{{ t.mode }}</div>
+                                {% if t.proof_image %}
+                                    <a href="{{ t.proof_image.url }}" target="_blank" class="small text-decoration-none">View Proof</a>
+                                {% endif %}
+                                {% if t.meter_reading %}
+                                    <div class="small text-muted">Reading: {{ t.meter_reading }}</div>
+                                {% endif %}
+                                {% if t.notes %}
+                                    <div class="small fst-italic text-secondary">{{ t.notes }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">₹{{ t.amount }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">No transactions yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="number"], input[type="date"], select, textarea, input[type="file"] {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.9rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}

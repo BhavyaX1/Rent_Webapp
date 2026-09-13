@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Bulk Rent Entry</h2>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-sm">Cancel</a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="card mb-4">
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Payment Date</label>
+                    <input type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Common Notes</label>
+                    <input type="text" name="common_notes" class="form-control" value="Monthly Rent">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">Select</th>
+                        <th width="20%">Tenant</th>
+                        <th width="20%">Electricity</th>
+                        <th width="15%">Extra/Due</th>
+                        <th width="15%">Payment</th>
+                        <th width="25%">Proof/Mode</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tenant in tenants %}
+                    <tr class="tenant-row">
+                        <td class="text-center">
+                            <input type="checkbox" name="select_{{ tenant.id }}" class="form-check-input row-selector" checked>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ tenant.name }}</div>
+                            <small class="text-muted">Base: ₹<span class="base-rent">{{ tenant.total_monthly_rent }}</span></small>
+                            {% if tenant.due_amount > 0 %}
+                            <div class="text-danger small fw-bold">Due: ₹{{ tenant.due_amount }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if tenant.meter and tenant.include_electricity %}
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light">Prev: {{ tenant.meter.current_reading }}</span>
+                                    <input type="number" step="0.01" name="reading_{{ tenant.id }}" class="form-control reading-input" placeholder="New Reading" data-prev="{{ tenant.meter.current_reading }}" data-rate="10">
+                                </div>
+                                <div class="text-end small text-warning fw-bold mt-1 bill-display">₹0</div>
+                            {% else %}
+                                <span class="text-muted small">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="extra_{{ tenant.id }}" class="form-control form-control-sm extra-input" placeholder="0">
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" step="0.01" name="amount_{{ tenant.id }}" class="form-control fw-bold total-input" value="{{ tenant.total_monthly_rent }}">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="row g-1">
+                                <div class="col-5">
+                                    <select name="mode_{{ tenant.id }}" class="form-select form-select-sm">
+                                        <option value="UPI">UPI</option>
+                                        <option value="CASH">Cash</option>
+                                        <option value="BANK">Bank</option>
+                                    </select>
+                                </div>
+                                <div class="col-7">
+                                    <input type="file" name="proof_{{ tenant.id }}" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-success px-4">Record Selected Payments</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Simple JS to auto-calculate totals in Bulk View
+    document.querySelectorAll('.tenant-row').forEach(row => {
+        const readingInput = row.querySelector('.reading-input');
+        const extraInput = row.querySelector('.extra-input');
+        const totalInput = row.querySelector('.total-input');
+        const billDisplay = row.querySelector('.bill-display');
+        const baseRent = parseFloat(row.querySelector('.base-rent').innerText);
+
+        function calculate() {
+            let elecCost = 0;
+            if (readingInput && readingInput.value) {
+                const current = parseFloat(readingInput.value);
+                const prev = parseFloat(readingInput.dataset.prev);
+                const rate = parseFloat(readingInput.dataset.rate);
+                if (current > prev) {
+                    elecCost = (current - prev) * rate;
+                    billDisplay.innerText = '₹' + elecCost.toFixed(2);
+                } else {
+                    billDisplay.innerText = '₹0';
+                }
+            }
+            
+            const extra = parseFloat(extraInput.value) || 0;
+            totalInput.value = (baseRent + elecCost + extra).toFixed(2);
+        }
+
+        if (readingInput) readingInput.addEventListener('input', calculate);
+        extraInput.addEventListener('input', calculate);
+    });
+</script>
+{% endblock %}

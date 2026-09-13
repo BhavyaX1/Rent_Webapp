@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item active">{{ property.name }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ property.name }} <span class="fs-6 text-muted">Tenants</span></h2>
+    <!-- Trigger Add Tenant Modal -->
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTenantModal">
+        <i class="bi bi-person-plus"></i> Add Tenant
+    </button>
+</div>
+
+<div class="card">
+    <div class="list-group list-group-flush">
+        {% for tenant in tenants %}
+        <a href="{% url 'tenant_detail' tenant.id %}" class="list-group-item list-group-item-action p-3">
+            <div class="d-flex w-100 justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1 fw-bold">{{ tenant.name }}</h5>
+                    <div class="text-muted small">
+                        <span class="me-3"><i class="bi bi-door-closed"></i> Room: {{ tenant.meter.room_number|default:"N/A" }}</span>
+                        <span class="me-3"><i class="bi bi-currency-rupee"></i> Rent: ₹{{ tenant.base_rent }}</span>
+                        <span><i class="bi bi-speedometer2"></i> Reading: {{ tenant.meter.current_reading|default:"0" }}</span>
+                    </div>
+                </div>
+                <div class="text-end">
+                    {% if tenant.due_amount > 0 %}
+                        <span class="badge bg-danger rounded-pill mb-1">Due: ₹{{ tenant.due_amount }}</span>
+                    {% else %}
+                        <span class="badge bg-success rounded-pill mb-1">Paid</span>
+                    {% endif %}
+                    <div><small class="text-primary">View Details <i class="bi bi-chevron-right"></i></small></div>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="p-5 text-center text-muted">
+            No active tenants in this property.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Tenant Modal -->
+<div class="modal fade" id="addTenantModal" tabindex="-1" aria-labelledby="addTenantLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addTenantLabel">Add New Tenant to {{ property.name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'add_tenant' property.id %}" method="post">
+          <div class="modal-body">
+              {% csrf_token %}
+              
+              <h6 class="text-primary border-bottom pb-1 mb-3">Basic Info</h6>
+              <div class="row">
+                  <div class="col-md-6 mb-3">
+                      <label class="small text-muted fw-bold">Name</label>
+                      {{ tenant_form.name }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                      <label class="small text-muted fw-bold">Phone</label>
+                      {{ tenant_form.phone }}
+                  </div>
+              </div>
+
+              <h6 class="text-primary border-bottom pb-1 mb-3 mt-2">Assignment</h6>
+              <div class="row">
+                  <div class="col-md-8 mb-3">
+                      <label class="small text-muted fw-bold">Select Room / Meter</label>
+                      {{ tenant_form.meter }}
+                      <div class="form-text small">Only unassigned meters for this property are shown.</div>
+                  </div>
+                  <div class="col-md-4 mb-3 d-flex align-items-center">
+                      <div class="form-check mt-3">
+                          {{ tenant_form.include_electricity }}
+                          <label class="form-check-label">Collect Electricity?</label>
+                      </div>
+                  </div>
+              </div>
+
+              <h6 class="text-primary border-bottom pb-1 mb-3 mt-2">Financials</h6>
+              <div class="row">
+                  <div class="col-md-4 mb-3">
+                      <label class="small text-muted fw-bold">Base Rent</label>
+                      {{ tenant_form.base_rent }}
+                  </div>
+                  <div class="col-md-4 mb-3">
+                      <label class="small text-muted fw-bold">Due Date (Day)</label>
+                      {{ tenant_form.rent_due_date }}
+                  </div>
+                  <div class="col-md-4 mb-3">
+                      <label class="small text-muted fw-bold">Move In Date</label>
+                      {{ tenant_form.joined_date }}
+                  </div>
+              </div>
+
+              <h6 class="text-primary border-bottom pb-1 mb-3 mt-2">Recurring Charges (Optional)</h6>
+              {{ charge_formset.management_form }}
+              {% for form in charge_formset %}
+                <div class="row g-2 align-items-center mb-2">
+                    <div class="col-6">
+                        {{ form.name.label_tag }} (Name)
+                        {{ form.name }}
+                    </div>
+                    <div class="col-6">
+                        {{ form.amount.label_tag }} (Amount)
+                        {{ form.amount }}
+                    </div>
+                    <!-- Hidden fields for the formset -->
+                    {{ form.id }} 
+                </div>
+              {% endfor %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-success">Save Tenant</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+    /* Ensure inputs inside modal look good */
+    .modal-body input[type="text"], 
+    .modal-body input[type="number"], 
+    .modal-body input[type="date"], 
+    .modal-body select {
+        display: block; width: 100%; padding: 0.375rem 0.75rem; border: 1px solid #ced4da; border-radius: 0.25rem;
+    }
+    .modal-body input[type="checkbox"] {
+        width: 1.2em; height: 1.2em; margin-right: 5px;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-archive text-secondary"></i> Past Tenants History</h2>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Tenant Name</th>
+                    <th>Property</th>
+                    <th>Phone</th>
+                    <th>Left On</th>
+                    <th class="text-end">Final Dues</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tenant in tenants %}
+                <tr>
+                    <td class="fw-bold">{{ tenant.name }}</td>
+                    <td>{{ tenant.property.name }}</td>
+                    <td class="text-muted">{{ tenant.phone }}</td>
+                    <td>{{ tenant.left_date|date:"d M Y"|default:"Unknown" }}</td>
+                    <td class="text-end fw-bold {% if tenant.due_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                        ₹{{ tenant.due_amount }}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'tenant_detail' tenant.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-clock-history"></i> View Transactions
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">No past tenants found in the archive.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
